@@ -52,6 +52,11 @@ class WritingAssistantTestCase(TestCase):
         return self.metadata.get("language", "en")
     
     @property
+    def locale(self) -> str:
+        """Get locale from metadata, fallback to language field or 'en'."""
+        return self.metadata.get("locale") or self.metadata.get("language", "en")
+    
+    @property
     def category(self) -> Optional[str]:
         return self.metadata.get("category")
 
@@ -66,6 +71,11 @@ class GoalAssistTestCase(TestCase):
     @property
     def num_feedback_items(self) -> int:
         return self.metadata.get("num_feedback_items", 0)
+    
+    @property
+    def locale(self) -> str:
+        """Get locale from metadata, default to 'en'."""
+        return self.metadata.get("locale", "en")
     
     @property
     def category(self) -> Optional[str]:
@@ -84,6 +94,11 @@ class FeedbackSummaryTestCase(TestCase):
         return self.metadata.get("num_items", 0)
     
     @property
+    def locale(self) -> str:
+        """Get locale from metadata, default to 'en'."""
+        return self.metadata.get("locale", "en")
+    
+    @property
     def category(self) -> Optional[str]:
         return self.metadata.get("category")
 
@@ -98,6 +113,11 @@ class PerformanceSummaryTestCase(TestCase):
     @property
     def performance_level(self) -> Optional[str]:
         return self.metadata.get("performance_level")
+    
+    @property
+    def locale(self) -> str:
+        """Get locale from metadata, default to 'en'."""
+        return self.metadata.get("locale", "en")
     
     @property
     def category(self) -> Optional[str]:
@@ -118,6 +138,11 @@ class MeetingsSummaryTestCase(TestCase):
     @property
     def n_meetings(self) -> int:
         return self.metadata.get("n_meetings", 0)
+    
+    @property
+    def locale(self) -> str:
+        """Get locale from metadata, default to 'en'."""
+        return self.metadata.get("locale", "en")
     
     @property
     def category(self) -> Optional[str]:
@@ -146,6 +171,11 @@ class SkillsDiscoveryTestCase(TestCase):
     @property
     def department(self) -> Optional[str]:
         return self.metadata.get("department")
+    
+    @property
+    def locale(self) -> str:
+        """Get locale from metadata, default to 'en'."""
+        return self.metadata.get("locale", "en")
     
     @property
     def skills(self) -> list:

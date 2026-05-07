@@ -91,8 +91,13 @@ class ResponseCollector:
         model = config.endpoint.model
         
         try:
-            # Build messages
-            messages = self.prompt_builder.build_messages(test_case)
+            # Extract locale from test case (default to "en" if not present)
+            user_locale = "en"
+            if hasattr(test_case, 'locale'):
+                user_locale = test_case.locale
+            
+            # Build messages with locale
+            messages = self.prompt_builder.build_messages(test_case, user_locale=user_locale)
             
             # Call LLM endpoint
             llm_response = self.endpoint_client.call(

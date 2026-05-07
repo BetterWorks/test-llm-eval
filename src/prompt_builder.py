@@ -153,6 +153,7 @@ class GoalAssistPromptBuilder:
         
         system_prompt = system_prompt.replace("{goal_focus_nudge}", goal_focus_nudge)
         system_prompt = system_prompt.replace("{input_sources}", input_sources)
+        system_prompt = system_prompt.replace("{user_locale}", user_locale)
         
         messages = [
             {"role": "system", "content": system_prompt},
@@ -270,8 +271,9 @@ class SkillsDiscoveryPromptBuilder:
         prompt_key = prompt_map.get(source, "SKILL_DISCOVERY_CONVERSATION_CONTEXT_PROMPT")
         system_prompt = self.prompts.get(prompt_key, "")
         
-        # Replace placeholders if any
-        system_prompt = system_prompt.replace("{user_locale}", user_locale)
+        # Replace placeholders - skills discovery uses {locale} instead of {user_locale}
+        system_prompt = system_prompt.replace("{locale}", user_locale)
+        system_prompt = system_prompt.replace("{user_locale}", user_locale)  # fallback
         
         messages = [
             {"role": "system", "content": system_prompt},
