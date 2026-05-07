@@ -235,6 +235,71 @@ DATASET_VERSION_GUARDRAILS=1.1
 
 ---
 
+## Cache Management
+
+The framework caches datasets and prompts locally in `.cache/` to speed up repeated runs and reduce GitHub API calls.
+
+### Cache Structure
+
+```
+.cache/
+├── datasets/                        # Cached golden datasets
+│   ├── writing_assistant/
+│   ├── goal_assist/
+│   ├── feedback_summary/
+│   ├── performance_summary/
+│   ├── meetings_summary/
+│   ├── skills_discovery/
+│   └── guardrails/
+└── prompts/                         # Cached prompts from llm-engine/llm-proxy
+    ├── writing_assistant/
+    ├── goals_assistant/
+    ├── feedback_summary/
+    ├── performance_summary/
+    ├── meetings_summary/
+    ├── skill/
+    └── guardrails/
+```
+
+### Clear Cache Commands
+
+```bash
+# Clear all caches (datasets + prompts)
+rm -rf .cache
+
+# Clear only prompts cache (force fresh prompt download)
+rm -rf .cache/prompts
+
+# Clear only datasets cache (force fresh dataset download)
+rm -rf .cache/datasets
+
+# Clear specific feature prompt cache
+rm -rf .cache/prompts/writing_assistant
+
+# Clear guardrail prompts cache
+rm -rf .cache/prompts/guardrails
+```
+
+### When to Clear Cache
+
+- **Prompts updated in llm-engine/llm-proxy** — Clear prompts cache to get latest versions
+- **Dataset version changed** — Cache is version-specific, so switching versions auto-fetches new data
+- **Debugging unexpected responses** — Clear prompts cache to ensure you have latest instructions
+- **Multi-language support issues** — Clear prompts cache to refresh locale-aware prompt templates
+- **Disk space concerns** — Typical cache is ~5MB datasets + ~50KB prompts
+
+### Bypass Cache
+
+```bash
+# Force refresh guardrail prompts without clearing cache file
+python cli.py run-guardrails --force-refresh-prompts
+
+# Disable caching for a single run (set in .env)
+CACHE_ENABLED=false python cli.py run --feature writing_assistant
+```
+
+---
+
 ## Architecture
 
 ```
@@ -295,15 +360,17 @@ test_case.prompt (JSON)
 
 **GitHub rate limit errors** — Set `GITHUB_TOKEN` in `.env`.
 
-**Prompt not found** — If a guardrail prompt constant name changed in llm-proxy, clear the cache and re-fetch:
+**Prompt not found** — If a guardrail prompt constant name changed in llm-proxy, clear the guardrail prompts cache:
 ```bash
 rm -rf .cache/prompts/guardrails
 python cli.py run-guardrails --force-refresh-prompts --max-cases 1 --verbose
 ```
 
-**Cache stale** — Force refresh datasets or prompts:
+**Cache stale or outdated prompts** — See the [Cache Management](#cache-management) section for detailed cache clearing commands.
+
+**Multi-language responses defaulting to English** — Ensure prompts cache is cleared to get latest locale-aware templates:
 ```bash
-rm -rf .cache   # clears everything
+rm -rf .cache/prompts
 ```
 
 **Endpoint unreachable** — Check VPN/network access to the endpoint:
