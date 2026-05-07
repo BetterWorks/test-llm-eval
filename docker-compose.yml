@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  llm-eval:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: llm-eval-runner
+    env_file:
+      - .env
+    volumes:
+      # Mount source code for development
+      - .:/app
+      # Persist artifacts and cache
+      - ./artifacts:/app/artifacts
+      - ./.cache:/app/.cache
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
+    command: python cli.py --help
+    
+  # Run quick test (5 cases)
+  quick-test:
+    extends: llm-eval
+    container_name: llm-eval-quick
+    command: python cli.py run --feature writing_assistant --max-cases 5 --verbose
+    
+  # Run full benchmark
+  full-benchmark:
+    extends: llm-eval
+    container_name: llm-eval-full
+    command: python cli.py run --feature writing_assistant
+    
+  # Validate setup
+  validate:
+    extends: llm-eval
+    container_name: llm-eval-validate
+    command: python validate_setup.py
+    
+  # Test endpoint connection
+  test-connection:
+    extends: llm-eval
+    container_name: llm-eval-connection
+    command: python cli.py test-connection
+
+networks:
+  default:
+    name: llm-eval-network

@@ -1,0 +1,22 @@
+# Core dependencies
+pydantic>=2.0.0
+python-dotenv>=1.0.0
+requests>=2.31.0
+tenacity>=8.2.0
+
+# OpenAI SDK for judge evaluation
+openai>=1.30.0
+
+# CLI
+click>=8.1.0
+
+# Data processing
+jsonlines>=4.0.0
+json-repair>=0.25.0  # For robust JSON parsing
+
+# Testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+
+# Optional
+rich>=13.0.0  # For beautiful terminal output
