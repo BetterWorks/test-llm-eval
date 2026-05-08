@@ -105,6 +105,13 @@ class FeedbackSummaryPromptBuilder:
         system_prompt = system_prompt.replace("{user_name_prompt}", user_name_prompt)
         system_prompt = system_prompt.replace("{user_locale}", user_locale)
         
+        # PATCH: Fix llm-engine bug - FS_INITIAL_AGGREGATION_PROMPT has hard-coded "in English language"
+        # Remove this and add proper locale instruction
+        system_prompt = system_prompt.replace(
+            "- Ensure that the generated summary is in English language.",
+            f"- Convert the data into {user_locale} and generate the summary, strengths, and areas of improvement in {user_locale}."
+        )
+        
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": test_case.prompt}
@@ -150,10 +157,18 @@ class GoalAssistPromptBuilder:
         # Replace placeholders
         goal_focus_nudge = test_case.metadata.get("goal_focus_nudge", "business or developmental")
         input_sources = test_case.metadata.get("input_sources", "user input, job title, department")
+        goal_type = test_case.metadata.get("goal_type", "business")  # business or developmental
+        goal_count = test_case.metadata.get("goal_count", "6")  # Default to 6 goals
         
         system_prompt = system_prompt.replace("{goal_focus_nudge}", goal_focus_nudge)
         system_prompt = system_prompt.replace("{input_sources}", input_sources)
         system_prompt = system_prompt.replace("{user_locale}", user_locale)
+        system_prompt = system_prompt.replace("{goal_type}", goal_type)
+        system_prompt = system_prompt.replace("{goal_count}", str(goal_count))
+        
+        # Handle milestone_instructions placeholder (may not exist in non-Haven prompts)
+        milestone_instructions = test_case.metadata.get("milestone_instructions", "")
+        system_prompt = system_prompt.replace("{milestone_instructions}", milestone_instructions)
         
         messages = [
             {"role": "system", "content": system_prompt},
@@ -192,8 +207,18 @@ class PerformanceSummaryPromptBuilder:
         # Replace user name placeholder if available
         user_name = test_case.metadata.get("user_name", "the employee")
         user_name_prompt = f"'{user_name}'"
+        
+        # Replace placeholders
+        system_prompt = system_prompt.replace("{module_type}", "performance")
         system_prompt = system_prompt.replace("{user_name_prompt}", user_name_prompt)
         system_prompt = system_prompt.replace("{user_locale}", user_locale)
+        
+        # PATCH: Fix llm-engine bug - PS_INITIAL_AGGREGATION_PROMPT has hard-coded "in English language"
+        # Remove this and add proper locale instruction
+        system_prompt = system_prompt.replace(
+            "- Ensure that the generated summary is in English language.",
+            f"- Convert the data into {user_locale} and generate the summary, strengths, and areas of improvement in {user_locale}."
+        )
         
         messages = [
             {"role": "system", "content": system_prompt},
@@ -228,9 +253,29 @@ class MeetingsSummaryPromptBuilder:
         participant_1 = test_case.metadata.get("participant_1", "Participant 1")
         participant_2 = test_case.metadata.get("participant_2", "Participant 2")
         
+        # Replace relationship_details placeholder (default to peer-to-peer)
+        relationship_details = test_case.metadata.get("relationship_details", 'Relationship Type: "Peer-to-Peer"')
+        
+        # Replace key_area_focused placeholder (default to common areas)
+        key_area_focused = test_case.metadata.get(
+            "key_area_focused", 
+            ["Goals & Performance", "Career Growth & Development", "Feedback & Recognition"]
+        )
+        if isinstance(key_area_focused, list):
+            key_area_focused = ", ".join(key_area_focused)
+        
         system_prompt = system_prompt.replace("{participant_1}", participant_1)
         system_prompt = system_prompt.replace("{participant_2}", participant_2)
+        system_prompt = system_prompt.replace("{relationship_details}", relationship_details)
+        system_prompt = system_prompt.replace("{key_area_focused}", key_area_focused)
         system_prompt = system_prompt.replace("{user_locale}", user_locale)
+        
+        # PATCH: Add locale instruction to MS_INITIAL_AGGREGATION_PROMPT
+        # The llm-engine's MS_INITIAL_AGGREGATION_PROMPT doesn't have locale instructions
+        # Only MS_FINAL_AGGREGATION_PROMPT has "translate only values to {user_locale}"
+        # Add locale instruction for our single-stage test framework
+        if "Output JSON keys must remain in English" not in system_prompt:
+            system_prompt += f"\n\nIMPORTANT: Output JSON keys must remain in English; translate only values to {user_locale}."
         
         messages = [
             {"role": "system", "content": system_prompt},

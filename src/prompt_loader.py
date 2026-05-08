@@ -2,6 +2,7 @@
 Prompt loader for fetching prompts from Betterworks/llm-engine repository.
 Dynamically loads prompt files based on feature and model type.
 """
+import ast
 import base64
 import logging
 import re
@@ -100,41 +101,67 @@ class PromptLoader:
             f.write(content)
     
     def _extract_prompt_constants(self, content: str) -> Dict[str, str]:
-        """Extract prompt string constants from Python file."""
+        """Extract prompt string constants from Python file using AST parsing."""
         prompts = {}
         
-        # Split by triple quotes to find multi-line strings
-        parts = re.split(r"('''|\"\"\")", content)
+        try:
+            # Parse the Python file content
+            tree = ast.parse(content)
+            
+            # Find all top-level assignments
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Assign):
+                    # Check if it's assigning to a variable (not tuple unpacking, etc.)
+                    if len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
+                        var_name = node.targets[0].id
+                        
+                        # Only process uppercase constant names
+                        if var_name.isupper():
+                            # Get the value - it could be a string or a joined string
+                            value = self._get_string_value(node.value)
+                            if value is not None:
+                                prompts[var_name] = value
         
-        current_var = None
-        in_string = False
-        string_content = []
-        
-        for i, part in enumerate(parts):
-            if part in ("'''", '"""'):
-                if not in_string:
-                    # Starting a string - check if previous part has variable name
-                    if i > 0:
-                        # Match patterns like:
-                        # VAR_NAME = '''
-                        # VAR_NAME = ('''
-                        # VAR_NAME = (\n    '''
-                        match = re.search(r"([A-Z_]+)\s*=\s*(?:\(\s*)?$", parts[i-1].strip())
-                        if match:
-                            current_var = match.group(1)
-                            in_string = True
-                            string_content = []
-                else:
-                    # Ending a string
-                    if current_var:
-                        prompts[current_var] = ''.join(string_content)
-                        current_var = None
-                    in_string = False
-                    string_content = []
-            elif in_string:
-                string_content.append(part)
+        except SyntaxError as e:
+            logger.error(f"Syntax error parsing prompts file: {e}")
+            # Fall back to the old method if AST parsing fails
+            return self._extract_prompt_constants_fallback(content)
         
         logger.info(f"Extracted {len(prompts)} prompt constants: {list(prompts.keys())}")
+        return prompts
+    
+    def _get_string_value(self, node) -> Optional[str]:
+        """Extract string value from AST node, handling string concatenation."""
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            # Simple string constant
+            return node.value
+        elif isinstance(node, ast.JoinedStr):
+            # f-string - concatenate parts
+            parts = []
+            for value in node.values:
+                if isinstance(value, ast.Constant):
+                    parts.append(str(value.value))
+            return ''.join(parts) if parts else None
+        elif hasattr(ast, 'Str') and isinstance(node, ast.Str):
+            # Python <3.8 compatibility
+            return node.s
+        else:
+            # Not a string
+            return None
+    
+    def _extract_prompt_constants_fallback(self, content: str) -> Dict[str, str]:
+        """Fallback method using regex - handles simpler cases."""
+        prompts = {}
+        
+        # Match patterns like: CONSTANT_NAME = '''...'''  or CONSTANT_NAME = ('''...''')
+        # This regex captures multi-line strings
+        pattern = r"^([A-Z_]+)\s*=\s*(?:\()?\s*'''(.*?)'''\s*(?:\))?"
+        matches = re.findall(pattern, content, re.MULTILINE | re.DOTALL)
+        
+        for var_name, value in matches:
+            prompts[var_name] = value
+        
+        logger.info(f"Extracted {len(prompts)} prompt constants using fallback method")
         return prompts
     
     def load_prompts(self, feature: str, model: Optional[str] = None, force_refresh: bool = False) -> Dict[str, str]:

@@ -213,7 +213,8 @@ class GuardrailTestCase(BaseModel):
         try:
             data = json.loads(self.prompt)
             self.input_text = data.get("text", "")
-            self.guardrails_requested = data.get("guardrails", [])
+            # Dataset uses 'guardrail_checks' not 'guardrails'
+            self.guardrails_requested = data.get("guardrail_checks", data.get("guardrails", []))
             self.direction = data.get("direction", "input")
             self.context_type = data.get("context_type", "")
         except (json.JSONDecodeError, TypeError):
